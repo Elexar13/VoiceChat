@@ -16,9 +16,7 @@ function leave() {
 /*
  * Prepare websocket for signaling server endpoint.
  */
-// var signalingWebsocket = new WebSocket("ws://" + window.location.host +
-//     "/VoiceChat/signal");
-var signalingWebsocket = new WebSocket("ws://10.10.1.235:8080/VoiceChat/signal");
+var signalingWebsocket = new WebSocket("ws://192.168.0.107:8080/VoiceChat/signal");
 
 signalingWebsocket.onmessage = function(msg) {
     console.log("Got message", msg.data);
@@ -84,7 +82,7 @@ function preparePeerConnection() {
     /*
 	 * Track other participant's remote stream & display in UI when available.
 	 *
-	 * This is how other participant's audio will start showing up on my
+	 * This is how other participant's video & audio will start showing up on my
 	 * browser as soon as his local stream added to track of peer connection in
 	 * his UI.
 	 */
@@ -97,19 +95,20 @@ function preparePeerConnection() {
  */
 async function displayLocalStreamAndSignal(firstTime) {
     console.log('Requesting local stream');
-    const localAudio = document.getElementById('localAudio');
+    const localVideo = document.getElementById('localVideo');
     let localStream;
     try {
-        // Capture local audio stream & set to local <video> DOM
+        // Capture local video & audio stream & set to local <video> DOM
         // element
         const stream = await navigator.mediaDevices.getUserMedia({
-            audio: true
+            audio: true,
+            video: true
         });
         console.log('Received local stream');
-        localAudio.srcObject = stream;
+        localVideo.srcObject = stream;
         localStream = stream;
-        logAudioTrackInfo(localStream);
-``
+        logVideoAudioTrackInfo(localStream);
+
         // For first time, add local stream to peer connection.
         if (firstTime) {
             setTimeout(
@@ -129,10 +128,10 @@ async function displayLocalStreamAndSignal(firstTime) {
 };
 
 /*
- * Add local audio stream to peer connection so that other
+ * Add local webcam & audio stream to peer connection so that other
  * participant's UI will be notified using 'track' event.
  *
- * This is how my audio is sent to other participant's UI.
+ * This is how my video & audio is sent to other participant's UI.
  */
 async function addLocalStreamToPeerConnection(localStream) {
     console.log('Starting addLocalStreamToPeerConnection');
@@ -145,9 +144,9 @@ async function addLocalStreamToPeerConnection(localStream) {
  */
 function displayRemoteStream(e) {
     console.log('displayRemoteStream');
-    const remoteAudio = document.getElementById('remoteAudio');
-    if (remoteAudio.srcObject !== e.streams[0]) {
-        remoteAudio.srcObject = e.streams[0];
+    const remoteVideo = document.getElementById('remoteVideo');
+    if (remoteVideo.srcObject !== e.streams[0]) {
+        remoteVideo.srcObject = e.streams[0];
         console.log('pc2 received remote stream');
     }
 };
@@ -158,12 +157,11 @@ function displayRemoteStream(e) {
  * view & hear me using 'track' event.
  */
 function sendOfferSignal() {
-    console.log('SEND OFFER');
     peerConnection.createOffer(function(offer) {
         sendSignal(offer);
         peerConnection.setLocalDescription(offer);
     }, function(error) {
-        alert("Error creating an offer" + error);
+        alert("Error creating an offer");
     });
 };
 
@@ -172,7 +170,6 @@ function sendOfferSignal() {
  * handshake.
  */
 function handleOffer(offer) {
-    console.log('HANDLE OFFER');
     peerConnection
         .setRemoteDescription(new RTCSessionDescription(offer));
 
@@ -211,8 +208,12 @@ function handleCandidate(candidate) {
 /*
  * Logs names of your webcam & microphone to console just for FYI.
  */
-function logAudioTrackInfo(localStream) {
+function logVideoAudioTrackInfo(localStream) {
+    const videoTracks = localStream.getVideoTracks();
     const audioTracks = localStream.getAudioTracks();
+    if (videoTracks.length > 0) {
+        console.log(`Using video device: ${videoTracks[0].label}`);
+    }
     if (audioTracks.length > 0) {
         console.log(`Using audio device: ${audioTracks[0].label}`);
     }
